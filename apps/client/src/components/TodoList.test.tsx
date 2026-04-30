@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -40,6 +40,7 @@ describe('TodoList', () => {
   });
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it('renders each todo title', async () => {
@@ -56,13 +57,36 @@ describe('TodoList', () => {
     expect(screen.getByText('second task')).toBeInTheDocument();
   });
 
-  it('renders nothing while pending', () => {
-    vi.mocked(fetch).mockImplementationOnce(() => new Promise(() => {}));
-    const { container } = renderWithClient(<TodoList />);
-    expect(container).toBeEmptyDOMElement();
+  it('renders EmptyState when the list is empty', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    renderWithClient(<TodoList />);
+
+    expect(await screen.findByText(/no todos yet/i)).toBeInTheDocument();
   });
 
-  it('renders nothing on error (ErrorBanner handles user-facing errors)', async () => {
+  it('renders LoadingIndicator only after the 200ms threshold while pending', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.mocked(fetch).mockImplementationOnce(() => new Promise(() => {}));
+
+    renderWithClient(<TodoList />);
+
+    // Before threshold: nothing visible.
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders nothing on error', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       new Response(JSON.stringify({ error: { message: 'fail', code: 'INTERNAL' } }), {
         status: 500,
@@ -71,7 +95,6 @@ describe('TodoList', () => {
     );
 
     const { container } = renderWithClient(<TodoList />);
-    // Wait for the query to settle into error state.
     await new Promise((r) => setTimeout(r, 50));
     expect(container).toBeEmptyDOMElement();
   });
