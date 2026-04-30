@@ -53,7 +53,15 @@ async function request<T>(method: Method, path: string, body?: unknown): Promise
     return undefined as T;
   }
 
-  return (await response.json()) as T;
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new ApiClientError(
+      'Server returned non-JSON success body',
+      'INVALID_RESPONSE_BODY',
+      response.status,
+    );
+  }
 }
 
 export const apiClient = {

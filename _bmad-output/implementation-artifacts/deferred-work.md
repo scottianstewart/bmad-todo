@@ -42,3 +42,17 @@
 ## Deferred from: code review of 1-1-bootstrap-monorepo-workspace-structure (2026-04-29)
 
 - **`.vscode/` excluded from `.gitignore`** — shared workspace config (extensions.json, recommended settings) is not committed to the repo. Low-priority for a solo project; revisit if team collaboration is introduced.
+
+---
+
+## Deferred from: code review of 2-1-tanstack-query-setup-and-api-client-wrapper (2026-04-29)
+
+- **Architectural deviation: `@shared/*` path alias not wired through build tooling.** Architecture §Implementation Patterns mandates `@shared/*` (alongside `@app/*` and `@server/*`). `tsconfig.base.json` declares the path alias, but Vite, Vitest, and the project-references graph were never wired for it. Story 1.4 instead established the workspace package name `@todo-app/shared` (functionally equivalent: same files, same source resolution). Story 2.1 imports use `@todo-app/shared` to match what's actually wired. Full architectural alignment requires: composite emit on `packages/shared` (currently `noEmit: true`), declaration emit, project reference from each consumer, plus matching `resolve.alias` entries in `vite.config.ts` and `vitest.config.ts`. Pragmatic call: defer to a future architectural-alignment pass; no functional impact. Affects: `apps/client/src/lib/api-client.ts:1`, future Epic 2/3 client imports.
+
+- **No fetch timeout / `AbortController` in `apiClient`.** Hung connections will block UI and exhaust the React Query retry budget without surfacing as `NETWORK_ERROR`. Story 2.1 spec explicitly defers timeout config to Story 2.3 (ErrorBanner + NFR-7's "1s timeout" surface). Story 2.3's dev agent should add an `AbortController`-based timeout to `request<T>()` and a corresponding code path in `ApiClientError` (e.g., `code: 'TIMEOUT'`). Affects: `apps/client/src/lib/api-client.ts:43-50`.
+
+- **Vite proxy hardcodes `http://localhost:3001`.** No env override available; if a developer runs the API on a different port (custom Docker, CI) they must edit `vite.config.ts`. Acceptable for v1. Future enhancement: read from `process.env.API_URL` (or a dotenv-vite plugin) with the current literal as the fallback. Affects: `apps/client/vite.config.ts:13-15`.
+
+- **`perf.ts` concurrency: same-name marks overwrite each other.** `markStart('todo.create')` followed by another `markStart('todo.create')` before the first `markEnd` will overwrite the start mark; the first measurement will be wrong (or zero). v1 is single-user with sequential mutations; concurrent same-name marks aren't expected. Future enhancement: scope marks by a generated id, or accept that concurrent measurements need unique names by convention.
+
+- **Tests don't assert outgoing request shape (method, URL, body).** A regression where `apiClient.post` swapped its body argument with the path argument would pass every existing `api-client.test.tsx` case because tests verify only response handling. Low priority — covered indirectly by integration tests in Stories 2.4 / 2.5 / 2.8 / 2.9 (each exercises a real route + real method via supertest or Playwright). Add explicit `expect(fetch).toHaveBeenCalledWith(...)` assertions when the api-client is touched again.

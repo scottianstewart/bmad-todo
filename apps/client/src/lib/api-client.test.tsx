@@ -87,6 +87,21 @@ describe('apiClient', () => {
     });
   });
 
+  it('throws ApiClientError with INVALID_RESPONSE_BODY when 200 body is not JSON', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response('not-json', {
+        status: 200,
+        headers: { 'Content-Type': 'text/plain' },
+      }),
+    );
+
+    await expect(apiClient.get('/api/health')).rejects.toMatchObject({
+      name: 'ApiClientError',
+      code: 'INVALID_RESPONSE_BODY',
+      status: 200,
+    });
+  });
+
   it('returns undefined for 204 No Content responses', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       new Response(null, { status: 204 }),

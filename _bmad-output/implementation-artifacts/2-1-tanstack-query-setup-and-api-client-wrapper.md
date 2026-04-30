@@ -1,6 +1,6 @@
 # Story 2.1: TanStack Query setup and api-client wrapper
 
-Status: review
+Status: done
 
 <!-- Validation optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -251,3 +251,27 @@ No debugging cycles. All 17 ACs satisfied on the first implementation pass; lint
 |---|---|---|
 | 2026-04-29 | Story 2.1 created (ready-for-dev) | Initial Epic 2 entry; comprehensive context engine analysis complete |
 | 2026-04-29 | Story 2.1 implemented (review) | TanStack Query v5 + api-client wrapper + perf helpers wired; 17/17 ACs satisfied; 48/48 workspace tests pass; zero debug cycles |
+| 2026-04-29 | Code review applied 3 fixes (done) | (1) Wrap success-path `response.json()` in try/catch → `INVALID_RESPONSE_BODY`; (2) Retry policy skips 4xx; (3) Architectural deviation re `@shared/*` vs `@todo-app/shared` package-name imports logged to deferred-work.md. 49/49 tests pass. |
+
+## Review Findings
+
+Three parallel adversarial reviews ran on 2026-04-29 (Blind Hunter / Edge Case Hunter / Acceptance Auditor). Triage:
+
+- [x] [Review][Patch] **Success-path JSON parse failure not contained.** `request<T>` calls `response.json() as T` on the success path with no try/catch. A 200 OK with malformed body would surface a raw `SyntaxError` rather than an `ApiClientError`, violating the wrapper's contract. APPLIED: wrapped in `try/catch`; throws `ApiClientError` with `code: 'INVALID_RESPONSE_BODY'`. Test added in `api-client.test.tsx` (200 + non-JSON body). [apps/client/src/lib/api-client.ts:78-90]
+
+- [x] [Review][Patch] **Retry policy retries 4xx errors.** Default `retry: 1` re-fires on `ApiClientError` regardless of HTTP status. 4xx responses (e.g., 400 VALIDATION_FAILED) cannot succeed on retry — adds unnecessary latency. APPLIED: replaced `retry: 1` with a function returning `false` for 4xx `ApiClientError`s, otherwise `failureCount < 1`. [apps/client/src/lib/query-client.ts:7-15]
+
+- [x] [Review][Defer] **Architectural deviation: `@shared/*` path alias vs `@todo-app/shared` package name.** Architecture §Implementation Patterns mandates `@shared/*`; Story 1.4 actually wired the workspace package as `@todo-app/shared`. The two are functionally equivalent (both resolve to `packages/shared/src/`), but the architecture's stated form requires multi-config plumbing (tsconfig path + Vite alias + Vitest alias + project-references composite emit). Pragmatic decision: keep `@todo-app/shared` for Epic 2; add to deferred-work for a future architectural-alignment pass. Logged to `_bmad-output/implementation-artifacts/deferred-work.md`. [apps/client/src/lib/api-client.ts:1]
+
+- [x] [Review][Defer] **No fetch timeout / `AbortController`.** Hung connections will block UI and exhaust the React Query retry budget without ever surfacing as `NETWORK_ERROR`. Spec explicitly defers to Story 2.3 (ErrorBanner integration); see story `Things NOT in this story` list. Logged to deferred-work.md so 2.3's dev agent picks it up.
+
+- [x] [Review][Defer] **Vite proxy hardcodes `http://localhost:3001`.** Acceptable for v1 single-port dev; if devs run the API on a different port (Docker, CI) they'd edit the file. Logged to deferred-work.md as low-priority `process.env.API_URL` enhancement.
+
+- [x] [Review][Defer] **`perf.ts` concurrency: same-name marks overwrite.** Real concern under concurrent operations sharing a name; v1 is single-user with no expected concurrency on shared mark names. Logged to deferred-work.md.
+
+- [x] [Review][Defer] **Tests don't assert request shape (method, URL, body).** A bug where `apiClient.post` swapped body with path would pass every test. Low priority — covered indirectly by integration tests in stories 2.4/2.5/2.8/2.9. Logged to deferred-work.md as a follow-up to the 2.x test suite.
+
+**False positives (noted, not applied):**
+- TS 6.0 / Vite 8 / Vitest 4 / jsdom 29 versions: architecture-verified web-current as of 2026-04-29.
+- `no-restricted-imports` `regex` field: ESLint 10's `no-restricted-imports` rule supports `regex` on `patterns` entries. Verified via existing-config behavior across Stories 1.1–1.9.
+- `main.tsx`'s `getElementById('root')!` non-null assertion: standard React idiom; React itself crashes loudly with a clear message if `#root` is missing.
