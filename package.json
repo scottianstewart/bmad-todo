@@ -1,0 +1,32 @@
+{
+  "name": "todo-app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Personal todo app — single-user, server-backed via Express + PostgreSQL, future-auth-ready seam.",
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter client dev & pnpm --filter server dev",
+    "build": "pnpm --filter client build && pnpm --filter server build",
+    "test": "pnpm --filter client test && pnpm --filter server test && pnpm --filter @todo-app/shared test",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "db:up": "docker compose up -d",
+    "db:generate": "pnpm --filter server exec drizzle-kit generate",
+    "db:migrate": "pnpm --filter server exec drizzle-kit migrate"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.2.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import-x": "^4.16.2",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.8.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.1"
+  }
+}
