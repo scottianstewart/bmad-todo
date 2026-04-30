@@ -110,6 +110,72 @@ describe('apiClient', () => {
     await expect(apiClient.del('/api/todos/abc')).resolves.toBeUndefined();
   });
 
+  it('GET sends method=GET and no body', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ status: 'ok' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await apiClient.get('/api/health');
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/health',
+      expect.objectContaining({ method: 'GET', body: undefined }),
+    );
+  });
+
+  it('POST sends method=POST, JSON body, and Content-Type header', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: '1' }), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await apiClient.post('/api/todos', { title: 'hi' });
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/todos',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ title: 'hi' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+  });
+
+  it('PATCH sends method=PATCH and JSON body', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await apiClient.patch('/api/todos/1', { completed: true });
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/todos/1',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ completed: true }),
+      }),
+    );
+  });
+
+  it('del sends method=DELETE and no body', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    await apiClient.del('/api/todos/1');
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/todos/1',
+      expect.objectContaining({ method: 'DELETE', body: undefined }),
+    );
+  });
+
   it('thrown errors are instances of ApiClientError', async () => {
     vi.mocked(fetch).mockRejectedValueOnce(new TypeError('Failed to fetch'));
 

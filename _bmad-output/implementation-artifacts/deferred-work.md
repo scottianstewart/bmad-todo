@@ -1,58 +1,51 @@
 # Deferred Work
 
-## Deferred from: code review of 1-1-bootstrap-monorepo-workspace-structure (2026-04-29)
-
-- **`@typescript-eslint/no-floating-promises` not type-aware** — `parserOptions.project` is omitted from `eslint.config.js`; rule is inert until wired. Deferred to story 1.3 (story 1.2 already underway). Story 1.3 dev MUST add `parserOptions.project` to the ESLint config for this rule to actually enforce no-floating-promises.
-
-- **Path alias targets don't exist yet** — `tsconfig.base.json` paths point to `./apps/client/src/*`, `./apps/server/src/*`, `./packages/shared/src/*` which don't exist. Correct by design; will be created in stories 1.2/1.3/1.4.
-## Deferred from: code review of 1-2-scaffold-vite-react-typescript-frontend-skeleton (2026-04-29)
-
-- **`import-x/order` missing `pathGroups` for `@app/*`** — imports using `@app/` will be classified as `external` by ESLint's import ordering rule. Add a `pathGroups` entry mapping `@app/**` to `internal` in the `import-x/order` rule config (story 2.x when first `@app/` imports are used).
-- **`vitest.config.ts` `globals: true` without vitest type declarations** — tests currently import explicitly from `'vitest'` so no issue now. If test files use implicit globals, add `"types": ["vitest/globals"]` (or equivalent) to the test tsconfig. Low priority.
-
-## Deferred from: code review of 1-3-scaffold-express-typescript-backend-skeleton (2026-04-29)
-
-- **`moduleResolution: "NodeNext"` for server tsconfig** — attempted, reverted due to `pino-http@11` CJS interop failure. Server should override to `NodeNext` once `@types/express@5` and `pino-http` resolve their Node ESM compatibility issues. `composite: true` also blocked by `@types/express@5` TS2883 errors on exported types.
-
-## Deferred from: code review of 1-3-scaffold-express-typescript-backend-skeleton (2026-04-29) — addendum
-
-- **`cors()` wildcard origin** — no origin allowlist; acceptable for personal app with no auth yet. Revisit when auth / known client origin added (story 1.7+).
-- **`LOG_LEVEL` env var ignored by pino** — `parseEnv()` validates `LOG_LEVEL` but `logger.ts` never reads it. Fix belongs in story 1.7 alongside the full env wiring.
-- **No Express error-handler middleware** — explicitly deferred to story 2.2 per Dev Notes.
-- **No graceful shutdown handler** — `SIGTERM`/`SIGINT` not handled; in-flight requests killed on container scale-down. Address in a future ops story.
-- **`express.json()` no explicit body-size limit** — relies on Express 5 implicit 100 kB default; set explicitly when API routes are added.
-- **`resolveOwner` unconditionally overwrites `req.owner`** — will silently clobber any future auth-derived identity placed before it in the middleware chain. Fix: `req.owner = req.owner ?? 'anonymous'`. Story 1.7 scope.
-- **`DATABASE_URL` hardcoded default credential** — `postgresql://todo:todo@localhost:5432/todo` in `env.ts` default; missing var in prod silently falls through. Story 1.7 scope.
-- **Health test supertest open handle** — `createApp()` instance in the health test is never explicitly closed; accumulates open handles as suite grows. Add `afterAll(server.close)` pattern when suite expands.
-
-## Deferred from: code review of 1-4-shared-types-package-with-todo-and-apierror-contracts (2026-04-29)
-
-- **`package.json` exports point to raw TS source** — `./src/index.ts` is the `default` export condition; `node dist/index.js` after server `tsc -b` would crash because Node.js can't execute `.ts` files natively. By design for current monorepo (Vite + tsx consumers). Fix before first production deployment: add `build` script, emit to `dist/`, update exports. Prerequisite for `composite: true` below.
-
-- **`composite: true` missing from `packages/shared/tsconfig.json`** — shared package can't be a proper `tsc -b` project reference without `composite: true` + `declaration: true`. Blocked by the dist-output gap above. Fix alongside production build story.
-
-- **`z.string().datetime()` timestamps incompatible with Drizzle `Date` objects** — Drizzle returns `Date` instances; `todoSchema` requires ISO strings. Every DB row passed through `todoSchema.parse()` will throw at runtime. Fix in story 1.5/1.6: change to `z.coerce.date()` or add a DB→wire mapping layer.
-
-- **`apiErrorSchema` missing `statusCode` field** — clients must inspect HTTP status separately and cannot branch solely on the parsed error object. Fix in story 2.1 when the API client is built.
-
-- **No `ApiSuccess<T>` / `ApiResponse<T>` union** — explicitly out of scope for story 1.4 ("No request/response wrapper types"). Define in story 2.1.
+A running ledger of items intentionally skipped during a story, with rationale and a pointer to where the fix should land. Reviewed at the end of each epic — stale items are marked resolved and removed; live items roll forward.
 
 ---
 
-## Deferred from: code review of 1-1-bootstrap-monorepo-workspace-structure (2026-04-29)
+## Resolved during 2026-04-30 deferred-work pass
 
-- **`.vscode/` excluded from `.gitignore`** — shared workspace config (extensions.json, recommended settings) is not committed to the repo. Low-priority for a solo project; revisit if team collaboration is introduced.
+These items were either fixed in a later story or rendered moot by the implementation that landed. Kept here as a paper trail; safe to remove on the next pass if no one needs the history.
+
+- ✅ **`@typescript-eslint/no-floating-promises` not type-aware** (deferred from 1.1) — fixed in 1.2 via `parserOptions.projectService: true` scoped to `apps/**/src/**` and `packages/**/src/**`.
+- ✅ **`import-x/order` missing `pathGroups` for `@app/*`** (deferred from 1.2) — fixed in 2.1 via `pathGroups` for `@app/**`, `@server/**`, `@shared/**`, `@todo-app/**`.
+- ✅ **No Express error-handler middleware** (deferred from 1.3) — fixed in 2.2.
+- ✅ **`express.json()` no explicit body-size limit** (deferred from 1.3) — fixed in 2.2 (`limit: '8kb'` with explicit 413 on overflow).
+- ✅ **`cors()` wildcard origin** (deferred from 1.3) — fixed in 2.2 (function-based allowlist driven by `CORS_ORIGIN` env var).
+- ✅ **`z.string().datetime()` vs Drizzle `Date` mismatch** (deferred from 1.4) — fixed in 1.6 via the `rowToTodo` mapper that calls `.toISOString()` on the timestamp columns.
+- ✅ **`apiErrorSchema` missing `statusCode`** (deferred from 1.4) — moot: Story 2.1's `ApiClientError` carries the HTTP status as a separate field on the thrown class. Duplicating it inside the envelope schema would be redundant and bloats the contract.
+- ✅ **No `ApiSuccess<T>` / `ApiResponse<T>` union** (deferred from 1.4) — moot: api-client helpers are generic in `T` and return the parsed body directly. A wrapper union would force callers to discriminate when the throw-on-error path already does that.
+- ✅ **`LOG_LEVEL` env var ignored by pino** (deferred from 1.3 addendum) — fixed 2026-04-30: `apps/server/src/lib/logger.ts` now reads `process.env.LOG_LEVEL` (default `'info'`).
+- ✅ **`resolveOwner` unconditionally overwrites `req.owner`** (deferred from 1.3 addendum) — fixed 2026-04-30: `req.owner ??= 'anonymous'` preserves any pre-existing identity. Test added.
+- ✅ **`DATABASE_URL` hardcoded default in production** (deferred from 1.3 addendum) — fixed 2026-04-30: `parseEnv` now requires `DATABASE_URL` when `NODE_ENV === 'production'` and only falls back to the dev default in `development`/`test`. Tests cover both paths.
+- ✅ **No graceful shutdown handler** (deferred from 1.3 addendum) — fixed 2026-04-30: `apps/server/src/index.ts` now registers `SIGTERM` and `SIGINT` handlers that call `server.close(...)` and exit cleanly, with a 10s hard cap so a stuck connection can't block shutdown forever.
+- ✅ **api-client tests don't assert outgoing request shape** (deferred from 2.1) — fixed 2026-04-30: added 4 cases asserting method + body + headers for `get` / `post` / `patch` / `del`.
 
 ---
 
-## Deferred from: code review of 2-1-tanstack-query-setup-and-api-client-wrapper (2026-04-29)
+## Live deferred items
 
-- **Architectural deviation: `@shared/*` path alias not wired through build tooling.** Architecture §Implementation Patterns mandates `@shared/*` (alongside `@app/*` and `@server/*`). `tsconfig.base.json` declares the path alias, but Vite, Vitest, and the project-references graph were never wired for it. Story 1.4 instead established the workspace package name `@todo-app/shared` (functionally equivalent: same files, same source resolution). Story 2.1 imports use `@todo-app/shared` to match what's actually wired. Full architectural alignment requires: composite emit on `packages/shared` (currently `noEmit: true`), declaration emit, project reference from each consumer, plus matching `resolve.alias` entries in `vite.config.ts` and `vitest.config.ts`. Pragmatic call: defer to a future architectural-alignment pass; no functional impact. Affects: `apps/client/src/lib/api-client.ts:1`, future Epic 2/3 client imports.
+### From 1.1
+- **`.vscode/` excluded from `.gitignore`** — shared workspace config (extensions.json, recommended settings) is not committed. Low-priority for solo work; revisit if collaboration starts.
 
-- **No fetch timeout / `AbortController` in `apiClient`.** Hung connections will block UI and exhaust the React Query retry budget without surfacing as `NETWORK_ERROR`. Story 2.1 spec explicitly defers timeout config to Story 2.3 (ErrorBanner + NFR-7's "1s timeout" surface). Story 2.3's dev agent should add an `AbortController`-based timeout to `request<T>()` and a corresponding code path in `ApiClientError` (e.g., `code: 'TIMEOUT'`). Affects: `apps/client/src/lib/api-client.ts:43-50`.
+### From 1.2
+- **`vitest.config.ts` `globals: true` without `"types": ["vitest/globals"]` in tsconfig** — currently fine because tests import from `'vitest'` explicitly. Add the type declaration if any test starts using implicit globals.
 
-- **Vite proxy hardcodes `http://localhost:3001`.** No env override available; if a developer runs the API on a different port (custom Docker, CI) they must edit `vite.config.ts`. Acceptable for v1. Future enhancement: read from `process.env.API_URL` (or a dotenv-vite plugin) with the current literal as the fallback. Affects: `apps/client/vite.config.ts:13-15`.
+### From 1.3
+- **`moduleResolution: "NodeNext"` for server tsconfig** — attempted in 1.3, reverted due to `pino-http@11` CJS interop failure and `@types/express@5` TS2883 errors on exported types. Revisit when those packages publish ESM-friendly versions; until then `moduleResolution: "Bundler"` (inherited from `tsconfig.base.json`) keeps things working.
+- **Health test supertest open handle** — test creates a `createApp()` instance and never explicitly closes it. No real handle leak today (supertest doesn't bind a port for this pattern), but worth an `afterAll(() => server.close())` if the suite ever switches to long-lived listeners.
 
-- **`perf.ts` concurrency: same-name marks overwrite each other.** `markStart('todo.create')` followed by another `markStart('todo.create')` before the first `markEnd` will overwrite the start mark; the first measurement will be wrong (or zero). v1 is single-user with sequential mutations; concurrent same-name marks aren't expected. Future enhancement: scope marks by a generated id, or accept that concurrent measurements need unique names by convention.
+### From 1.4
+- **`packages/shared/package.json` exports point to raw TS source** — `./src/index.ts` is the `default` export condition. Fine for the current monorepo (Vite + tsx + Vitest all resolve TS source directly), but `node dist/index.js` after a server `tsc -b` would crash since Node can't execute `.ts` natively. Fix before any production deploy that doesn't bundle the server: add `build` script, emit to `dist/`, update exports.
+- **`composite: true` missing from `packages/shared/tsconfig.json`** — blocked by the dist-output gap above. Required for `tsc -b` project references.
 
-- **Tests don't assert outgoing request shape (method, URL, body).** A regression where `apiClient.post` swapped its body argument with the path argument would pass every existing `api-client.test.tsx` case because tests verify only response handling. Low priority — covered indirectly by integration tests in Stories 2.4 / 2.5 / 2.8 / 2.9 (each exercises a real route + real method via supertest or Playwright). Add explicit `expect(fetch).toHaveBeenCalledWith(...)` assertions when the api-client is touched again.
+### From 2.1
+- **Architectural deviation: `@shared/*` path alias not wired through build tooling** — architecture mandates `@shared/*`, but Story 1.4 wired `@todo-app/shared` (workspace package name) instead, and Story 2.1's `api-client.ts` imports use the package name to match. Functionally equivalent (same files, same resolution); architecturally a mismatch with the documented convention. Full alignment requires composite emit + declaration emit + project references + matching `resolve.alias` entries. Pragmatic call: defer to a future architectural-alignment pass.
+- **No fetch timeout / `AbortController` in `apiClient`** — hung connections will block UI and exhaust the React Query retry budget without surfacing as `NETWORK_ERROR`. Story 2.1 spec explicitly defers timeout to Story 3.5 (chaos test, NFR-7's "1s timeout" surface). Story 3.5's dev should add an `AbortController`-based timeout to `request<T>()` and a corresponding `code: 'TIMEOUT'` ApiClientError path.
+- **Vite proxy hardcodes `http://localhost:3001`** — no env override. Acceptable for v1 single-port dev; future enhancement reads from `process.env.API_URL` (or a dotenv-vite plugin) with the literal as fallback.
+- **`perf.ts` concurrency: same-name marks overwrite each other** — `markStart('todo.create')` followed by another `markStart('todo.create')` before `markEnd` overwrites the start. v1 is single-user with sequential mutations; concurrent same-name marks aren't expected. Future enhancement scopes marks by a generated id.
+
+### From visual pass 2026-04-30
+- **Postgres host port 5432 collision** — discovered when the visual pass server was hitting a host-installed Postgres at `localhost:5432` instead of the docker container. Remapped docker-compose to `5433:5432` and propagated through `.env.example`, `env.ts` default, `drizzle.config.ts`, `env.test.ts`. Bootstrap walkthrough acceptance (Story 3.7) should call out this collision in the README so future devs don't get bitten when they `pnpm db:up` on a machine with host Postgres.
+- **`pnpm db:migrate` (drizzle-kit) silently fails with `[⣷] applying migrations...undefined`** — drizzle-kit's CLI swallows errors when it can't connect or the DB is in an unexpected state. Workaround used during visual pass: `docker exec -i todo-app-postgres psql -U todo -d todo < migration.sql`. Worth adding to README troubleshooting and tracking upstream — drizzle-kit#6453 / similar issues exist in their tracker. Story 3.7 scope (bootstrap acceptance).

@@ -16,4 +16,15 @@ describe('resolveOwner middleware', () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ owner: 'anonymous' });
   });
+
+  it('preserves a pre-existing req.owner (auth seam)', async () => {
+    const { resolveOwner } = await import('./resolve-owner.js');
+    const next = (() => {}) as () => void;
+    const req = { owner: 'user-123' } as unknown as Parameters<typeof resolveOwner>[0];
+    const res = {} as unknown as Parameters<typeof resolveOwner>[1];
+
+    resolveOwner(req, res, next);
+
+    expect((req as unknown as { owner: string }).owner).toBe('user-123');
+  });
 });

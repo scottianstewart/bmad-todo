@@ -7,6 +7,7 @@ describe('parseEnv', () => {
     const env = parseEnv({});
 
     expect(env.DATABASE_URL).toBe('postgresql://todo:todo@localhost:5433/todo');
+    expect(env.NODE_ENV).toBe('development');
     expect(env.PORT).toBe(3001);
     expect(env.BIND).toBe('127.0.0.1');
     expect(env.ALLOW_PUBLIC_BIND).toBe(false);
@@ -47,5 +48,24 @@ describe('parseEnv', () => {
 
   it('throws on non-numeric PORT', () => {
     expect(() => parseEnv({ PORT: 'abc' })).toThrow('Invalid environment variables');
+  });
+
+  it('throws when DATABASE_URL is missing in production', () => {
+    expect(() => parseEnv({ NODE_ENV: 'production' })).toThrow(
+      /DATABASE_URL: required in production/,
+    );
+  });
+
+  it('uses the dev default for DATABASE_URL in development', () => {
+    const env = parseEnv({ NODE_ENV: 'development' });
+    expect(env.DATABASE_URL).toBe('postgresql://todo:todo@localhost:5433/todo');
+  });
+
+  it('honors a non-default DATABASE_URL in production', () => {
+    const env = parseEnv({
+      NODE_ENV: 'production',
+      DATABASE_URL: 'postgresql://prod:secret@db.example.com:5432/app',
+    });
+    expect(env.DATABASE_URL).toBe('postgresql://prod:secret@db.example.com:5432/app');
   });
 });

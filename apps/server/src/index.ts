@@ -17,6 +17,26 @@ function bootstrap() {
       logger.fatal({ err }, 'Server failed to start');
       process.exit(1);
     });
+
+    const shutdown = (signal: NodeJS.Signals) => {
+      logger.info({ signal }, 'Shutdown signal received; closing server');
+      server.close((err) => {
+        if (err) {
+          logger.error({ err }, 'Error during server close');
+          process.exit(1);
+        }
+        logger.info('Server closed cleanly');
+        process.exit(0);
+      });
+      // Hard cap so a stuck connection can't block shutdown forever.
+      setTimeout(() => {
+        logger.warn('Shutdown timeout exceeded; forcing exit');
+        process.exit(1);
+      }, 10_000).unref();
+    };
+
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
   } catch (err) {
     logger.fatal({ err }, 'Bootstrap failed');
     process.exit(1);
