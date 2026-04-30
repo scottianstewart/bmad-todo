@@ -7,6 +7,6 @@ declare module 'express' {
 }
 
 export function resolveOwner(req: Request, _res: Response, next: NextFunction) {
-  req.owner ??= 'anonymous';
+  req.owner ||= 'anonymous';
   next();
 }

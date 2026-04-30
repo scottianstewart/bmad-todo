@@ -146,7 +146,7 @@ describe('apiClient', () => {
     );
   });
 
-  it('PATCH sends method=PATCH and JSON body', async () => {
+  it('PATCH sends method=PATCH, JSON body, and Content-Type header', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
@@ -161,6 +161,7 @@ describe('apiClient', () => {
       expect.objectContaining({
         method: 'PATCH',
         body: JSON.stringify({ completed: true }),
+        headers: { 'Content-Type': 'application/json' },
       }),
     );
   });

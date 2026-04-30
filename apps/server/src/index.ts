@@ -18,9 +18,28 @@ function bootstrap() {
       process.exit(1);
     });
 
+    let shuttingDown = false;
     const shutdown = (signal: NodeJS.Signals) => {
+      if (shuttingDown) {
+        logger.warn({ signal }, 'Shutdown already in progress; ignoring duplicate signal');
+        return;
+      }
+      shuttingDown = true;
+
       logger.info({ signal }, 'Shutdown signal received; closing server');
+
+      // Stop idle keep-alive connections immediately so server.close can resolve.
+      server.closeIdleConnections();
+
+      const timer = setTimeout(() => {
+        logger.warn('Shutdown timeout exceeded; closing remaining connections and exiting');
+        server.closeAllConnections();
+        process.exit(1);
+      }, 10_000);
+      timer.unref();
+
       server.close((err) => {
+        clearTimeout(timer);
         if (err) {
           logger.error({ err }, 'Error during server close');
           process.exit(1);
@@ -28,13 +47,10 @@ function bootstrap() {
         logger.info('Server closed cleanly');
         process.exit(0);
       });
-      // Hard cap so a stuck connection can't block shutdown forever.
-      setTimeout(() => {
-        logger.warn('Shutdown timeout exceeded; forcing exit');
-        process.exit(1);
-      }, 10_000).unref();
     };
 
+    // Register signal handlers BEFORE listen completes so a SIGTERM during the
+    // listen window is caught instead of hitting the default terminate behavior.
     process.on('SIGTERM', shutdown);
     process.on('SIGINT', shutdown);
   } catch (err) {

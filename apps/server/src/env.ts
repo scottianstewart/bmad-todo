@@ -3,7 +3,7 @@ import { z } from 'zod';
 const DEV_DATABASE_URL_DEFAULT = 'postgresql://todo:todo@localhost:5433/todo';
 
 const envSchema = z.object({
-  DATABASE_URL: z.string().optional(),
+  DATABASE_URL: z.string().min(1).optional(),
   PORT: z.coerce.number().int().positive().default(3001),
   BIND: z.string().default('127.0.0.1'),
   ALLOW_PUBLIC_BIND: z

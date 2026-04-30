@@ -68,4 +68,14 @@ describe('parseEnv', () => {
     });
     expect(env.DATABASE_URL).toBe('postgresql://prod:secret@db.example.com:5432/app');
   });
+
+  it('rejects empty-string DATABASE_URL', () => {
+    expect(() => parseEnv({ DATABASE_URL: '' })).toThrow('Invalid environment variables');
+  });
+
+  it('NODE_ENV=test falls through to the dev DATABASE_URL default', () => {
+    const env = parseEnv({ NODE_ENV: 'test' });
+    expect(env.DATABASE_URL).toBe('postgresql://todo:todo@localhost:5433/todo');
+    expect(env.NODE_ENV).toBe('test');
+  });
 });
