@@ -16,6 +16,8 @@ function rowToTodo(row: typeof todos.$inferSelect): Todo {
   };
 }
 
+export type TodosRepo = ReturnType<typeof createTodosRepo>;
+
 export function createTodosRepo(db: Db) {
   return {
     async list(ownerId: string): Promise<Todo[]> {
