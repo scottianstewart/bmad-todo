@@ -17,9 +17,10 @@ export default [
       '**/dist/**',
       '**/build/**',
       '**/coverage/**',
+      '**/playwright-report/**',
+      '**/test-results/**',
       '**/*.tsbuildinfo',
       'pnpm-lock.yaml',
-      'apps/*/scripts/**',
     ],
   },
 
