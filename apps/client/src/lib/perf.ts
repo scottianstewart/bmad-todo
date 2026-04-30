@@ -3,6 +3,15 @@ export function markStart(name: string): void {
 }
 
 export function markEnd(name: string): { duration: number } {
+  // If markStart was never called for this name, performance.measure throws
+  // a SyntaxError. Bail out cleanly so callers don't have to wrap each markEnd
+  // in a try/catch (mutation hooks fire markEnd in onSettled, which runs even
+  // when onMutate's markStart didn't get called — e.g., when StrictMode
+  // double-mounts a component in dev).
+  if (performance.getEntriesByName(`${name}:start`, 'mark').length === 0) {
+    return { duration: 0 };
+  }
+
   performance.mark(`${name}:end`);
   performance.measure(name, `${name}:start`, `${name}:end`);
 

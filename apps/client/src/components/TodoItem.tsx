@@ -27,7 +27,7 @@ export default function TodoItem({ todo }: TodoItemProps) {
       </button>
       <span
         className={`min-w-0 flex-1 break-words text-base ${
-          todo.completed ? 'text-gray-500 line-through opacity-70' : 'text-gray-900'
+          todo.completed ? 'text-gray-600 line-through' : 'text-gray-900'
         }`}
       >
         {todo.title}

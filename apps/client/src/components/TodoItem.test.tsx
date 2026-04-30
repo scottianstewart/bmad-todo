@@ -67,7 +67,7 @@ describe('TodoItem', () => {
 
     const titleSpan = screen.getByText('review code');
     expect(titleSpan.className).toMatch(/line-through/);
-    expect(titleSpan.className).toMatch(/text-gray-500|opacity-70/);
+    expect(titleSpan.className).toMatch(/text-gray-600/);
   });
 
   it('uses default text styling when active', () => {
