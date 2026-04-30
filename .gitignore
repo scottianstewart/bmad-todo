@@ -13,6 +13,9 @@ test-results/
 playwright-report/
 playwright/.cache/
 
+# Lighthouse CI artifacts
+.lighthouseci/
+
 # Environment files (allow .env.example)
 .env
 .env.*
