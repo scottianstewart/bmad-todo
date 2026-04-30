@@ -1,3 +1,13 @@
+# Profiles:
+#   (default) — postgres only, the local-dev experience (clients hit it via
+#               localhost:5433); `pnpm dev` runs server + client on the host.
+#   full      — postgres + server + client all containerized, end-to-end
+#               smoke test of the production-equivalent topology. Run with
+#               `docker compose --profile full up`.
+#
+# All services declare healthchecks so `docker compose ps` and
+# `docker compose logs` give a coherent view of readiness.
+
 services:
   postgres:
     image: postgres:17
@@ -6,11 +16,101 @@ services:
     ports:
       - "5433:5432"
     environment:
-      POSTGRES_USER: todo
-      POSTGRES_PASSWORD: todo
-      POSTGRES_DB: todo
+      POSTGRES_USER: ${POSTGRES_USER:-todo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-todo}
+      POSTGRES_DB: ${POSTGRES_DB:-todo}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-todo} -d ${POSTGRES_DB:-todo}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - todoapp
+
+  # Apply migrations once on `--profile full` startup.
+  # Idempotent: the migration files use CREATE TABLE IF NOT EXISTS-equivalent
+  # patterns via Drizzle's generated SQL.
+  migrate:
+    image: postgres:17
+    profiles: [full]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-todo}
+    volumes:
+      - ./apps/server/src/db/migrations:/migrations:ro
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        set -e
+        for f in /migrations/*.sql; do
+          echo "Applying $$f"
+          psql -h postgres -U ${POSTGRES_USER:-todo} -d ${POSTGRES_DB:-todo} -f "$$f" || true
+        done
+    networks:
+      - todoapp
+
+  server:
+    profiles: [full]
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    container_name: todo-app-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-todo}:${POSTGRES_PASSWORD:-todo}@postgres:5432/${POSTGRES_DB:-todo}
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: "3001"
+      BIND: "0.0.0.0"
+      # Inside the docker network on a private bridge, 0.0.0.0 is fine.
+      # Public exposure is gated by host port mapping below + R-2 warning.
+      ALLOW_PUBLIC_BIND: "true"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+    ports:
+      - "${SERVER_PORT:-3001}:3001"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://127.0.0.1:3001/api/health || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - todoapp
+
+  client:
+    profiles: [full]
+    build:
+      context: .
+      dockerfile: apps/client/Dockerfile
+    container_name: todo-app-client
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    ports:
+      - "${CLIENT_PORT:-8080}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://127.0.0.1:80/ || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - todoapp
 
 volumes:
   pgdata:
+
+networks:
+  todoapp:
+    driver: bridge

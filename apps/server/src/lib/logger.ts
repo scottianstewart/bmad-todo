@@ -18,6 +18,19 @@ function resolveLogLevel(): string {
 
 const logger = pino({
   level: resolveLogLevel(),
+  // Redact secrets and request-scoped sensitive headers so they never reach
+  // stdout / log aggregators. The `*.DATABASE_URL` and `*.password` paths
+  // catch arbitrary error objects that pg / drizzle may attach.
+  redact: {
+    paths: [
+      'req.headers.authorization',
+      'req.headers.cookie',
+      'res.headers["set-cookie"]',
+      '*.password',
+      '*.DATABASE_URL',
+    ],
+    remove: true,
+  },
   transport:
     process.env['NODE_ENV'] !== 'production'
       ? { target: 'pino-pretty', options: { colorize: true } }

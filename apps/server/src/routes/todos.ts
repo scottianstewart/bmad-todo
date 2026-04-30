@@ -5,6 +5,7 @@ import { createTodoInputSchema, updateTodoInputSchema } from '@todo-app/shared';
 
 import type { TodosRepo } from '../db/todos-repo.js';
 import { ApiError } from '../lib/errors.js';
+import { ownerOf } from '../middleware/resolve-owner.js';
 import { validate } from '../middleware/validate.js';
 
 const idParamsSchema = z.object({ id: z.string().uuid() });
@@ -13,12 +14,12 @@ export function createTodosRouter(repo: TodosRepo): Router {
   const router = Router();
 
   router.get('/', async (req, res) => {
-    const todos = await repo.list(req.owner);
+    const todos = await repo.list(ownerOf(req));
     res.json(todos);
   });
 
   router.post('/', validate(createTodoInputSchema), async (req, res) => {
-    const todo = await repo.create(req.owner, req.body as { title: string });
+    const todo = await repo.create(ownerOf(req), req.body as { title: string });
     res.status(201).location(`/api/todos/${todo.id}`).json(todo);
   });
 
@@ -28,7 +29,7 @@ export function createTodosRouter(repo: TodosRepo): Router {
     validate(updateTodoInputSchema),
     async (req, res) => {
       const { id } = req.params as { id: string };
-      const updated = await repo.update(req.owner, id, req.body);
+      const updated = await repo.update(ownerOf(req), id, req.body);
       if (!updated) {
         throw new ApiError('Todo not found', 'TODO_NOT_FOUND', 404);
       }
@@ -38,7 +39,7 @@ export function createTodosRouter(repo: TodosRepo): Router {
 
   router.delete('/:id', validate(idParamsSchema, 'params'), async (req, res) => {
     const { id } = req.params as { id: string };
-    await repo.delete(req.owner, id);
+    await repo.delete(ownerOf(req), id);
     res.status(204).end();
   });
 

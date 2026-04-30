@@ -1,6 +1,7 @@
 import cors from 'cors';
 import type { RequestHandler } from 'express';
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import pinoHttp from 'pino-http';
 
@@ -33,6 +34,23 @@ export function createApp(opts: CreateAppOptions = {}) {
     }),
   );
   app.use(express.json({ limit: '8kb' }));
+
+  // Rate limit /api at 100 requests/minute/IP in production. Mitigates the
+  // public-bind footgun (R-2) once ALLOW_PUBLIC_BIND is on. Disabled in
+  // dev and test to keep e2e suites and the 1000-write persistence
+  // integration test responsive; the production deployment is the only
+  // surface that needs the cap.
+  if (env.NODE_ENV === 'production') {
+    app.use(
+      '/api',
+      rateLimit({
+        windowMs: 60_000,
+        limit: 100,
+        standardHeaders: 'draft-7',
+        legacyHeaders: false,
+      }),
+    );
+  }
   app.use(
     pinoHttp({
       logger,

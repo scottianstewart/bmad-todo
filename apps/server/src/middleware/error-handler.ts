@@ -3,8 +3,7 @@ import { ZodError } from 'zod';
 
 import { ApiError } from '../lib/errors.js';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
+export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   if (err instanceof ApiError) {
     res.status(err.status).json({
       error: { message: err.message, code: err.code },

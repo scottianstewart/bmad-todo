@@ -41,6 +41,14 @@ export default [
       // Per-package overrides in stories 1.2 / 1.3 will allow `console.error` for client api-client.
       'no-console': 'error',
 
+      // Allow underscore-prefixed unused params (Express ErrorRequestHandler
+      // requires 4-arity even when next isn't used; ditto for other middleware
+      // signatures that mandate a position the body doesn't read).
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+
       // No relative imports beyond one level — use path aliases (@app, @server, @shared).
       'no-restricted-imports': [
         'error',
