@@ -1,0 +1,105 @@
+name: Lighthouse CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: lighthouse-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lcp-gate:
+    name: LCP < 2s on Fast 3G (NFR-6)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: todo
+          POSTGRES_PASSWORD: todo
+          POSTGRES_DB: todo
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U todo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Apply database migrations
+        env:
+          PGPASSWORD: todo
+        run: |
+          for f in apps/server/src/db/migrations/*.sql; do
+            psql -h localhost -p 5433 -U todo -d todo -f "$f"
+          done
+
+      - name: Seed 50 todos for Lighthouse run
+        env:
+          PGPASSWORD: todo
+        run: |
+          for i in $(seq 1 50); do
+            psql -h localhost -p 5433 -U todo -d todo -c \
+              "INSERT INTO todos (title) VALUES ('Seeded task $i');"
+          done
+
+      - name: Build the client
+        run: pnpm --filter client build
+
+      - name: Boot the API server
+        env:
+          DATABASE_URL: postgresql://todo:todo@localhost:5433/todo
+          BIND: 127.0.0.1
+          PORT: '3001'
+          ALLOW_PUBLIC_BIND: 'false'
+          LOG_LEVEL: warn
+          NODE_ENV: development
+          CORS_ORIGIN: http://localhost:4173
+        run: |
+          pnpm --filter server dev > server.log 2>&1 &
+          # Wait for /api/health.
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:3001/api/health >/dev/null; then
+              echo "API ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "API failed to boot"
+          cat server.log
+          exit 1
+
+      - name: Serve the built client (vite preview)
+        run: |
+          # vite preview serves the built /dist output on port 4173.
+          pnpm --filter client preview --host 127.0.0.1 --port 4173 > preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:4173/ >/dev/null; then
+              echo "Preview ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Preview failed to boot"
+          cat preview.log
+          exit 1
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.14.x
+
+      - name: Run Lighthouse CI
+        run: lhci autorun

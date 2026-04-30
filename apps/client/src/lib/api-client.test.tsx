@@ -87,6 +87,17 @@ describe('apiClient', () => {
     });
   });
 
+  it('throws ApiClientError with TIMEOUT when fetch is aborted by the timeout signal', async () => {
+    const timeoutError = new DOMException('Request timed out', 'TimeoutError');
+    vi.mocked(fetch).mockRejectedValueOnce(timeoutError);
+
+    await expect(apiClient.get('/api/health')).rejects.toMatchObject({
+      name: 'ApiClientError',
+      code: 'TIMEOUT',
+      status: 0,
+    });
+  });
+
   it('throws ApiClientError with INVALID_RESPONSE_BODY when 200 body is not JSON', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       new Response('not-json', {

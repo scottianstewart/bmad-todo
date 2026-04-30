@@ -1,5 +1,10 @@
 import { apiErrorSchema } from '@todo-app/shared';
 
+// NFR-7: backend operation failures surface to the user within 1s. With
+// retry policies skipping TIMEOUT errors (see query-client.ts), a 1s
+// timeout per attempt fires the banner inside the budget.
+const REQUEST_TIMEOUT_MS = 1_000;
+
 export class ApiClientError extends Error {
   public readonly code: string;
   public readonly status: number;
@@ -21,8 +26,12 @@ async function request<T>(method: Method, path: string, body?: unknown): Promise
       method,
       headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-  } catch {
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'TimeoutError') {
+      throw new ApiClientError('Request timed out', 'TIMEOUT', 0);
+    }
     throw new ApiClientError('Network request failed', 'NETWORK_ERROR', 0);
   }
 
