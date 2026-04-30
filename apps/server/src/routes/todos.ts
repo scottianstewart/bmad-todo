@@ -8,6 +8,11 @@ import { validate } from '../middleware/validate.js';
 export function createTodosRouter(repo: TodosRepo): Router {
   const router = Router();
 
+  router.get('/', async (req, res) => {
+    const todos = await repo.list(req.owner);
+    res.json(todos);
+  });
+
   router.post('/', validate(createTodoInputSchema), async (req, res) => {
     const todo = await repo.create(req.owner, req.body as { title: string });
     res.status(201).location(`/api/todos/${todo.id}`).json(todo);

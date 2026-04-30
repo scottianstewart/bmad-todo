@@ -23,6 +23,43 @@ function buildFakeRepo(overrides: Partial<TodosRepo> = {}): TodosRepo {
   };
 }
 
+describe('GET /api/todos', () => {
+  it('returns the list of todos for req.owner', async () => {
+    const fakeTodos: Todo[] = [
+      {
+        id: 'a',
+        ownerId: 'anonymous',
+        title: 'first',
+        completed: false,
+        createdAt: '2026-04-29T00:00:00.000Z',
+        updatedAt: '2026-04-29T00:00:00.000Z',
+      },
+    ];
+    const repo = buildFakeRepo({
+      list: vi.fn(async () => fakeTodos),
+    });
+    const app = createApp({ todosRepo: repo });
+
+    const res = await request(app).get('/api/todos');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(fakeTodos);
+    expect(repo.list).toHaveBeenCalledWith('anonymous');
+  });
+
+  it('returns an empty array when there are no todos', async () => {
+    const repo = buildFakeRepo({
+      list: vi.fn(async () => []),
+    });
+    const app = createApp({ todosRepo: repo });
+
+    const res = await request(app).get('/api/todos');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+});
+
 describe('POST /api/todos', () => {
   it('creates a todo and returns 201 + Location header', async () => {
     const repo = buildFakeRepo();
