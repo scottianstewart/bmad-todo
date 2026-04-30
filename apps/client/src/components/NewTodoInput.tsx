@@ -24,7 +24,7 @@ export default function NewTodoInput() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mb-4 flex gap-2">
+    <form onSubmit={handleSubmit} className="mb-4 flex flex-wrap gap-2">
       <input
         type="text"
         value={title}
@@ -33,7 +33,7 @@ export default function NewTodoInput() {
         aria-label="Add a new todo"
         placeholder="Add a new todo..."
         disabled={createTodo.isPending}
-        className="flex-1 rounded border border-gray-300 px-3 py-2 text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50"
+        className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50"
       />
       <button
         type="submit"

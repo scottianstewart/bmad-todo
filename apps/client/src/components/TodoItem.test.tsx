@@ -61,6 +61,21 @@ describe('TodoItem', () => {
     );
   });
 
+  it('applies strikethrough and reduced contrast when completed (FR-5)', () => {
+    const completed = { ...todo, completed: true };
+    renderWithClient(<TodoItem todo={completed} />);
+
+    const titleSpan = screen.getByText('review code');
+    expect(titleSpan.className).toMatch(/line-through/);
+    expect(titleSpan.className).toMatch(/text-gray-500|opacity-70/);
+  });
+
+  it('uses default text styling when active', () => {
+    renderWithClient(<TodoItem todo={todo} />);
+    const titleSpan = screen.getByText('review code');
+    expect(titleSpan.className).not.toMatch(/line-through/);
+  });
+
   it('clicking the delete button fires DELETE /api/todos/:id', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 204 }));
 

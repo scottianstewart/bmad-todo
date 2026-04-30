@@ -25,7 +25,13 @@ export default function TodoItem({ todo }: TodoItemProps) {
       >
         {todo.completed ? '✓' : ''}
       </button>
-      <span className="flex-1 text-base text-gray-900">{todo.title}</span>
+      <span
+        className={`min-w-0 flex-1 break-words text-base ${
+          todo.completed ? 'text-gray-500 line-through opacity-70' : 'text-gray-900'
+        }`}
+      >
+        {todo.title}
+      </span>
       <button
         type="button"
         aria-label={`Delete todo: ${todo.title}`}
