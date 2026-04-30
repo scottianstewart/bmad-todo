@@ -6,7 +6,7 @@ describe('parseEnv', () => {
   it('returns defaults when given an empty object', () => {
     const env = parseEnv({});
 
-    expect(env.DATABASE_URL).toBe('postgresql://todo:todo@localhost:5432/todo');
+    expect(env.DATABASE_URL).toBe('postgresql://todo:todo@localhost:5433/todo');
     expect(env.PORT).toBe(3001);
     expect(env.BIND).toBe('127.0.0.1');
     expect(env.ALLOW_PUBLIC_BIND).toBe(false);

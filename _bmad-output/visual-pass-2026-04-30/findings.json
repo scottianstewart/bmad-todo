@@ -1,0 +1,112 @@
+[
+  {
+    "label": "initial render is the empty state",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "label": "EmptyState rendered when count=0",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "label": "todo \"buy milk\" visible after create",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "label": "input cleared after successful create",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "label": "EmptyState removed after create",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "label": "toggle flips aria-checked to true",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "label": "completed todo shows strikethrough (FR-5)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "label": "delete removes \"buy milk\" from list",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "label": "console.error in browser",
+    "status": "WARN",
+    "detail": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+  },
+  {
+    "label": "ErrorBanner appears with parsed code+message on 500",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "label": "input preserved on failed create (FR-9)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "label": "Dismiss clears the banner",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "label": "no horizontal scroll at 320px (FR-11)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "label": "input font-size >= 16px at 320px",
+    "status": "PASS",
+    "detail": "16px"
+  },
+  {
+    "label": "no horizontal scroll at 640px (FR-11)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "label": "input font-size >= 16px at 640px",
+    "status": "PASS",
+    "detail": "16px"
+  },
+  {
+    "label": "no horizontal scroll at 768px (FR-11)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "label": "input font-size >= 16px at 768px",
+    "status": "PASS",
+    "detail": "16px"
+  },
+  {
+    "label": "no horizontal scroll at 1024px (FR-11)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "label": "input font-size >= 16px at 1024px",
+    "status": "PASS",
+    "detail": "16px"
+  },
+  {
+    "label": "no horizontal scroll at 1920px (FR-11)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "label": "input font-size >= 16px at 1920px",
+    "status": "PASS",
+    "detail": "16px"
+  }
+]

@@ -19,6 +19,7 @@ export default [
       '**/coverage/**',
       '**/*.tsbuildinfo',
       'pnpm-lock.yaml',
+      'apps/*/scripts/**',
     ],
   },
 
